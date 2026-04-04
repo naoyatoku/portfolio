@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資産ポートフォリオ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', sans-serif; background: #f0f4f8; color: #2d3748; }
+
+    header {
+      background: #1a365d;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: 0.02em; }
+
+    .container { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+
+    /* Upload cards */
+    .upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem; }
+
+    .upload-card {
+      background: white;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+    }
+    .upload-card.loaded { border-color: #48bb78; background: #f0fff4; }
+    .upload-card.error  { border-color: #fc8181; background: #fff5f5; }
+
+    .uc-icon  { font-size: 2rem; margin-bottom: 0.5rem; }
+    .uc-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .uc-hint  { font-size: 0.75rem; color: #a0aec0; margin-bottom: 1rem; font-family: monospace; }
+    .uc-ok    { font-size: 0.8rem; color: #276749; font-weight: 600; margin-top: 0.75rem; line-height: 1.4; }
+    .uc-err   { font-size: 0.78rem; color: #c53030; margin-top: 0.5rem; }
+
+    /* ファイル選択：inputを直接表示してスタイルだけ整える
+       → iOS Safariで最も確実にchangeイベントが発火する方法 */
+    .file-picker {
+      display: block;
+      width: 100%;
+      font-size: 16px; /* iOSのズーム防止 */
+      cursor: pointer;
+      color: #4a5568;
+    }
+    /* Safari / iOS */
+    .file-picker::-webkit-file-upload-button {
+      background: #1a365d;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-right: 8px;
+    }
+    /* 標準 */
+    .file-picker::file-selector-button {
+      background: #1a365d;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    .upload-card.loaded .file-picker::-webkit-file-upload-button { background: #2f855a; }
+    .upload-card.loaded .file-picker::file-selector-button       { background: #2f855a; }
+
+    /* Results card */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.75rem 2rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .refresh-btn {
+      background: #1a365d;
+      color: white;
+      border: none;
+      padding: 0.55rem 1.3rem;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .refresh-btn:hover { background: #2c5282; }
+
+    /* Charts grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
+    .chart-card {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 1rem 0.75rem 0.75rem;
+      text-align: center;
+      min-width: 0; /* グリッドアイテムのはみ出し防止 */
+    }
+    .chart-card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+    }
+    .chart-card-sub {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a365d;
+      margin-bottom: 0.6rem;
+      min-height: 1.4em;
+    }
+    .chart-canvas-wrap { position: relative; height: 210px; overflow: hidden; }
+    .no-data {
+      height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #cbd5e0;
+      font-size: 0.85rem;
+      border: 2px dashed #e2e8f0;
+      border-radius: 8px;
+    }
+
+    /* Table */
+    .holdings-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .holdings-table th {
+      text-align: left;
+      padding: 0.6rem 0.9rem;
+      background: #f7fafc;
+      color: #4a5568;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .holdings-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #edf2f7; }
+    .holdings-table tr:last-child td { border-bottom: none; }
+    .holdings-table tr:hover td { background: #f7fafc; }
+    .holdings-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      line-height: 1.4;
+    }
+    .badge-r { background: #fff5f5; color: #c53030; }
+    .badge-s { background: #ebf8ff; color: #2b6cb0; }
+
+    .pct-bar {
+      display: inline-block;
+      height: 6px;
+      border-radius: 3px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* Table tabs */
+    .tab-nav {
+      display: flex;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 0;
+      margin-top: 0.25rem;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #a0aec0;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #4a5568; }
+    .tab-btn.active { color: #1a365d; border-bottom-color: #1a365d; }
+
+    @media (max-width: 700px) {
+      .upload-row  { grid-template-columns: 1fr; }
+      .chart-grid  { grid-template-columns: 1fr; }
+      .chart-canvas-wrap { height: 250px; }
+      .select-btn  { width: 100%; text-align: center; padding: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.4rem">📊</span>
+  <h1>資産ポートフォリオ</h1>
+</header>
+
+<div class="container">
+
+  <div class="upload-row">
+    <div class="upload-card" id="card-r">
+      <div class="uc-icon">🏦</div>
+      <div class="uc-title">楽天証券</div>
+      <div class="uc-hint">assetbalance(all)_日付.csv</div>
+      <input type="file" id="file-r" accept=".csv,text/csv" class="file-picker">
+      <div class="uc-ok"  id="ok-r"></div>
+      <div class="uc-err" id="err-r"></div>
+    </div>
+    <div class="upload-card" id="card-s">
+      <div class="uc-icon">🏢</div>
+      <div class="uc-title">SBI証券</div>
+      <div class="uc-hint">保有資産CSV</div>
+      <input type="file" id="file-s" accept=".csv,text/csv" class="file-picker">
+      <div class="uc-ok"  id="ok-s"></div>
+      <div class="uc-err" id="err-s"></div>
+    </div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none">
+    <div class="result-header">
+      <div></div>
+      <button class="refresh-btn" id="refresh-btn">
+        <span>↺</span> 更新
+      </button>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">トータル</div>
+        <div class="chart-card-sub">¥<span id="total-num"></span></div>
+        <div class="chart-canvas-wrap" id="wrap-total"><canvas id="chart-total"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">楽天証券のみ</div>
+        <div class="chart-card-sub" id="sub-r"></div>
+        <div class="chart-canvas-wrap" id="wrap-r"><canvas id="chart-r"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">SBI証券のみ</div>
+        <div class="chart-card-sub" id="sub-s"></div>
+        <div class="chart-canvas-wrap" id="wrap-s"><canvas id="chart-s"></canvas></div>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="total">トータル</button>
+      <button class="tab-btn"        data-tab="r">楽天証券</button>
+      <button class="tab-btn"        data-tab="s">SBI証券</button>
+    </div>
+
+    <table class="holdings-table">
+      <thead id="table-head"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// ── パレット ────────────────────────────────────────
+const PALETTE = [
+  '#3182ce','#e6a817','#38a169','#d53f8c','#805ad5',
+  '#00b5d8','#dd6b20','#d69e2e','#2f855a','#b83280',
+  '#553c9a','#2c7a7b','#c05621','#276749','#2a4365',
+  '#744210','#702459','#1a365d','#22543d','#322659',
+];
+
+// ── 状態 ────────────────────────────────────────────
+const state = { r: null, s: null };
+const charts = {};
+let currentColorMap = {};
+let currentMerged   = [];
+let currentTab      = 'total';
+
+// decode() は削除 — readAsText で代替
+
+// ── CSV パーサ（クォート対応）───────────────────────
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      if (q && text[i+1] === '"') { field += '"'; i++; }
+      else q = !q;
+    } else if (c === ',' && !q) {
+      row.push(field.trim()); field = '';
+    } else if (c === '\n' && !q) {
+      row.push(field.trim());
+      if (row.some(f => f !== '')) rows.push(row);
+      row = []; field = '';
+    } else if (c !== '\r') {
+      field += c;
+    }
+  }
+  row.push(field.trim());
+  if (row.some(f => f !== '')) rows.push(row);
+  return rows;
+}
+
+// ── 評価額カラム候補 ─────────────────────────────────
+// 楽天証券: "時価評価額[円]"  SBI証券: "評価額" 等に対応
+const isValueCol = c => /^(時価評価額|評価額|評価金額|時価金額)(\[円\])?$/.test(c);
+const isNameCol  = c => ['銘柄名','銘柄名称','ファンド名','銘柄','商品名','銘柄・名称'].includes(c);
+const SKIP_NAMES = /^(合計|小計|合\s*計|―|−|-|—|保有商品.*合計|資産合計)$/;
+
+// ── 保有資産を抽出 ────────────────────────────────────
+// 戦略: ヘッダ行（isValueCol かつ isNameCol を両方含む行）を探して
+//        その直下からデータを取り出す。複数セクション対応。
+function extractHoldings(rows) {
+  const holdings = {};
+  let i = 0;
+  while (i < rows.length) {
+    const row = rows[i];
+    const vi = row.findIndex(c => isValueCol(c));
+    const ni = row.findIndex(c => isNameCol(c));
+    if (vi !== -1 && ni !== -1) {
+      // データ行を読み込む
+      let j = i + 1;
+      while (j < rows.length) {
+        const dr = rows[j];
+        // 次のヘッダ行が来たら終了
+        if (dr.findIndex(c => isValueCol(c)) !== -1) break;
+        const name = dr[ni] || '';
+        if (name && !SKIP_NAMES.test(name)) {
+          const raw = (dr[vi] || '').replace(/[,¥￥\s]/g, '');
+          const val = parseFloat(raw);
+          if (!isNaN(val) && val > 0) {
+            holdings[name] = (holdings[name] || 0) + val;
+          }
+        }
+        j++;
+      }
+      i = j; // 次のセクションへ
+    } else {
+      i++;
+    }
+  }
+  return holdings;
+}
+
+// ── ファイル読み込み＋パース ─────────────────────────
+// readAsText でブラウザのネイティブ Shift-JIS デコードを使用
+// （iOS Safari で TextDecoder より確実）
+function readFile(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = e => {
+      try {
+        const text = e.target.result;
+        const rows = parseCSV(text);
+        const h = extractHoldings(rows);
+        if (Object.keys(h).length === 0)
+          rej(new Error('評価額データが見つかりませんでした。列名「評価額」を確認してください。'));
+        else
+          res(h);
+      } catch(err) { rej(err); }
+    };
+    fr.onerror = () => rej(new Error('ファイル読み込みエラー'));
+    fr.readAsText(file, 'shift-jis');  // ブラウザにデコードを任せる
+  });
+}
+
+// ── 合算・ソート ─────────────────────────────────────
+function merge() {
+  const map = {};
+  for (const [src, key] of [['r','楽天'], ['s','SBI']]) {
+    if (!state[src]) continue;
+    for (const [name, val] of Object.entries(state[src])) {
+      if (!map[name]) map[name] = { val: 0, src: [] };
+      map[name].val += val;
+      map[name].src.push(key);
+    }
+  }
+  return Object.entries(map).sort((a,b) => b[1].val - a[1].val);
+}
+
+// ── 数値フォーマット ─────────────────────────────────
+const fmt = n => Math.round(n).toLocaleString('ja-JP');
+
+// ── 1つの円グラフを描画 ──────────────────────────────
+// entries: [[name, value], ...] | null
+// colorMap: { name: color }
+// subId: 小計表示用 span の id (null なら更新しない)
+function drawChart(canvasId, wrapId, subId, entries, colorMap) {
+  const wrap = document.getElementById(wrapId);
+  const subEl = subId ? document.getElementById(subId) : null;
+
+  if (!entries || entries.length === 0) {
+    if (charts[canvasId]) { charts[canvasId].destroy(); delete charts[canvasId]; }
+    wrap.innerHTML = '<div class="no-data">データなし</div>';
+    if (subEl) subEl.textContent = '';
+    return;
+  }
+
+  // canvas が消えていたら復元
+  if (!wrap.querySelector('canvas')) {
+    wrap.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  }
+
+  const total  = entries.reduce((s,[,v]) => s + v, 0);
+  const labels = entries.map(([n]) => n);
+  const values = entries.map(([,v]) => v);
+  const colors = entries.map(([n]) => colorMap[n] || '#ccc');
+
+  if (subEl) subEl.textContent = '¥' + fmt(total);
+
+  if (charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(
+    document.getElementById(canvasId).getContext('2d'),
+    {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed;
+                const pct = ((v / total) * 100).toFixed(1);
+                return `  ¥${fmt(v)}  (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    }
+  );
+}
+
+// ── チャート＋テーブル描画 ───────────────────────────
+function render() {
+  const merged = merge();
+  if (!merged.length) return;
+
+  // 全銘柄に一貫した色を割り当て
+  const colorMap = {};
+  merged.forEach(([name], i) => { colorMap[name] = PALETTE[i % PALETTE.length]; });
+
+  // トータル
+  const totalEntries = merged.map(([n,h]) => [n, h.val]);
+  const total = totalEntries.reduce((s,[,v]) => s + v, 0);
+  document.getElementById('total-num').textContent = fmt(total);
+  drawChart('chart-total', 'wrap-total', null, totalEntries, colorMap);
+
+  // 楽天のみ
+  const rEntries = state.r
+    ? Object.entries(state.r).sort((a,b) => b[1]-a[1])
+    : null;
+  drawChart('chart-r', 'wrap-r', 'sub-r', rEntries, colorMap);
+
+  // SBIのみ
+  const sEntries = state.s
+    ? Object.entries(state.s).sort((a,b) => b[1]-a[1])
+    : null;
+  drawChart('chart-s', 'wrap-s', 'sub-s', sEntries, colorMap);
+
+  // テーブル描画（グローバル変数経由でタブ切り替えでも再利用）
+  currentColorMap = colorMap;
+  currentMerged   = merged;
+  renderTable(currentTab);
+
+  document.getElementById('result-card').style.display = '';
+}
+
+// ── テーブルをタブに応じて描画 ───────────────────────
+function renderTable(tab) {
+  currentTab = tab;
+
+  // タブボタンの active 切り替え
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab)
+  );
+
+  const thead = document.getElementById('table-head');
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  if (tab === 'total') {
+    thead.innerHTML =
+      '<tr>' +
+        '<th style="width:45%">銘柄</th>' +
+        '<th>証券会社</th>' +
+        '<th class="num">評価額</th>' +
+        '<th class="num" style="width:130px">割合</th>' +
+      '</tr>';
+    const total = currentMerged.reduce((s,[,h]) => s + h.val, 0);
+    currentMerged.forEach(([name, h]) => {
+      const pct   = h.val / total * 100;
+      const color = currentColorMap[name];
+      const badges = [...new Set(h.src)].map(s =>
+        s === '楽天'
+          ? '<span class="badge badge-r">楽天</span>'
+          : '<span class="badge badge-s">SBI</span>'
+      ).join(' ');
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
+        `<td>${badges}</td>` +
+        `<td class="num">¥${fmt(h.val)}</td>` +
+        `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
+      tbody.appendChild(tr);
+    });
+
+  } else {
+    const label = tab === 'r' ? '楽天証券' : 'SBI証券';
+    thead.innerHTML =
+      `<tr>` +
+        `<th style="width:55%">銘柄（${label}）</th>` +
+        `<th class="num">評価額</th>` +
+        `<th class="num" style="width:130px">割合</th>` +
+      `</tr>`;
+
+    const srcData = state[tab];
+    if (!srcData) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="3" style="text-align:center;color:#a0aec0;padding:2rem">未読み込みです</td>';
+      tbody.appendChild(tr);
+      return;
+    }
+
+    const entries = Object.entries(srcData).sort((a,b) => b[1]-a[1]);
+    const total   = entries.reduce((s,[,v]) => s + v, 0);
+    entries.forEach(([name, val]) => {
+      const pct   = val / total * 100;
+      const color = currentColorMap[name] || '#ccc';
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
+        `<td class="num">¥${fmt(val)}</td>` +
+        `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── ファイル入力セットアップ（label→input 方式）────────
+function setupFileInput(inputId, cardId, key) {
+  const input = document.getElementById(inputId);
+  const card  = document.getElementById(cardId);
+  const okEl  = document.getElementById('ok-'  + key);
+  const errEl = document.getElementById('err-' + key);
+
+  input.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    okEl.textContent  = '';
+    errEl.textContent = '';
+    card.classList.remove('loaded', 'error');
+    try {
+      const h = await readFile(file);
+      state[key] = h;
+      card.classList.add('loaded');
+      okEl.textContent = `✓ ${file.name}（${Object.keys(h).length} 銘柄）`;
+      render();
+    } catch(err) {
+      card.classList.add('error');
+      errEl.textContent = '⚠ ' + err.message;
+    }
+  });
+}
+
+// ── タブ切り替え ─────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => renderTable(btn.dataset.tab));
+});
+
+// ── 更新ボタン ───────────────────────────────────────
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  state.r = null; state.s = null;
+  currentColorMap = {}; currentMerged = []; currentTab = 'total';
+  ['r','s'].forEach(k => {
+    document.getElementById('card-' + k).classList.remove('loaded', 'error');
+    document.getElementById('ok-'   + k).textContent = '';
+    document.getElementById('err-'  + k).textContent = '';
+    document.getElementById('file-' + k).value = '';
+  });
+  document.getElementById('result-card').style.display = 'none';
+  Object.keys(charts).forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+});
+
+// ── 初期化 ───────────────────────────────────────────
+setupFileInput('file-r', 'card-r', 'r');
+setupFileInput('file-s', 'card-s', 's');
+</script>
+</body>
+</html>
