@@ -23,7 +23,6 @@
 
     /* Upload cards */
     .upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem; }
-
     .upload-card {
       background: white;
       border: 1.5px solid #e2e8f0;
@@ -33,58 +32,156 @@
     }
     .upload-card.loaded { border-color: #48bb78; background: #f0fff4; }
     .upload-card.error  { border-color: #fc8181; background: #fff5f5; }
-
     .uc-icon  { font-size: 2rem; margin-bottom: 0.5rem; }
     .uc-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
     .uc-hint  { font-size: 0.75rem; color: #a0aec0; margin-bottom: 1rem; font-family: monospace; }
     .uc-ok    { font-size: 0.8rem; color: #276749; font-weight: 600; margin-top: 0.75rem; line-height: 1.4; }
     .uc-err   { font-size: 0.78rem; color: #c53030; margin-top: 0.5rem; }
-
-    /* ファイル選択：inputを直接表示してスタイルだけ整える
-       → iOS Safariで最も確実にchangeイベントが発火する方法 */
-    .file-picker {
-      display: block;
-      width: 100%;
-      font-size: 16px; /* iOSのズーム防止 */
-      cursor: pointer;
-      color: #4a5568;
-    }
-    /* Safari / iOS */
+    .file-picker { display: block; width: 100%; font-size: 16px; cursor: pointer; color: #4a5568; }
     .file-picker::-webkit-file-upload-button {
-      background: #1a365d;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.1rem;
-      border-radius: 7px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      -webkit-appearance: none;
-      margin-right: 8px;
+      background: #1a365d; color: white; border: none;
+      padding: 0.6rem 1.1rem; border-radius: 7px; font-size: 0.875rem;
+      font-weight: 600; cursor: pointer; -webkit-appearance: none; margin-right: 8px;
     }
-    /* 標準 */
     .file-picker::file-selector-button {
-      background: #1a365d;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.1rem;
-      border-radius: 7px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-right: 8px;
+      background: #1a365d; color: white; border: none;
+      padding: 0.6rem 1.1rem; border-radius: 7px; font-size: 0.875rem;
+      font-weight: 600; cursor: pointer; margin-right: 8px;
     }
     .upload-card.loaded .file-picker::-webkit-file-upload-button { background: #2f855a; }
     .upload-card.loaded .file-picker::file-selector-button       { background: #2f855a; }
 
-    /* Results card */
+    /* Common card */
     .card {
       background: white;
       border-radius: 12px;
       padding: 1.75rem 2rem;
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 1.5rem;
     }
 
+    /* ── Classification card ── */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; color: #1a365d; }
+
+    .view-toggle {
+      display: flex;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .toggle-btn {
+      background: white;
+      border: none;
+      padding: 0.4rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #718096;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-btn + .toggle-btn { border-left: 1.5px solid #e2e8f0; }
+    .toggle-btn.active { background: #1a365d; color: white; }
+
+    .class-layout {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    .class-chart-wrap { position: relative; height: 270px; }
+    .cat-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.9rem;
+      margin-top: 0.75rem;
+    }
+    .cat-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #4a5568; }
+    .cat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .class-stats { display: flex; flex-direction: column; gap: 1rem; }
+
+    .section-title {
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.6rem;
+    }
+
+    /* Allocation bars */
+    .alloc-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+    .alloc-label { width: 38px; font-size: 0.8rem; font-weight: 600; color: #4a5568; flex-shrink: 0; }
+    .alloc-track {
+      flex: 1;
+      height: 16px;
+      background: #edf2f7;
+      border-radius: 8px;
+      position: relative;
+      overflow: visible;
+    }
+    .alloc-fill { height: 100%; border-radius: 8px; transition: width 0.5s ease; }
+    .alloc-target-tick {
+      position: absolute;
+      top: -3px; bottom: -3px;
+      width: 2.5px;
+      background: #2d3748;
+      border-radius: 2px;
+    }
+    .alloc-pct { width: 95px; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: #2d3748; text-align: right; flex-shrink: 0; }
+
+    /* Setting box */
+    .setting-box { background: #f7fafc; border-radius: 10px; padding: 0.85rem 1rem; }
+    .target-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; flex-wrap: wrap; }
+    .target-input {
+      width: 58px;
+      padding: 0.28rem 0.4rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      text-align: center;
+      font-weight: 700;
+      background: white;
+    }
+    .target-input:focus { outline: none; border-color: #4299e1; }
+    .target-input[readonly] { background: #edf2f7; color: #718096; }
+
+    /* Simulator */
+    .sim-box { background: #ebf8ff; border-radius: 10px; padding: 0.85rem 1rem; }
+    .sim-title { font-size: 0.73rem; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
+    .sim-input-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; margin-bottom: 0.75rem; }
+    .sim-input {
+      width: 130px;
+      padding: 0.3rem 0.5rem;
+      border: 1.5px solid #bee3f8;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      background: white;
+    }
+    .sim-input:focus { outline: none; border-color: #4299e1; }
+    .sim-result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #bee3f8;
+    }
+    .sim-result-row:last-child { border-bottom: none; }
+    .sim-result-label { color: #2b6cb0; font-weight: 600; }
+    .sim-result-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .sim-note { font-size: 0.72rem; color: #2b6cb0; margin-top: 0.5rem; line-height: 1.5; }
+
+    /* ── Detail card ── */
     .result-header {
       display: flex;
       justify-content: space-between;
@@ -94,22 +191,13 @@
       border-bottom: 1px solid #e2e8f0;
     }
     .refresh-btn {
-      background: #1a365d;
-      color: white;
-      border: none;
-      padding: 0.55rem 1.3rem;
-      border-radius: 7px;
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 600;
-      transition: background 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      background: #1a365d; color: white; border: none;
+      padding: 0.55rem 1.3rem; border-radius: 7px; cursor: pointer;
+      font-size: 0.875rem; font-weight: 600; transition: background 0.2s;
+      display: flex; align-items: center; gap: 6px;
     }
     .refresh-btn:hover { background: #2c5282; }
 
-    /* Charts grid */
     .chart-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -117,52 +205,26 @@
       margin-bottom: 1.75rem;
     }
     .chart-card {
-      background: #f7fafc;
-      border-radius: 10px;
-      padding: 1rem 0.75rem 0.75rem;
-      text-align: center;
-      min-width: 0; /* グリッドアイテムのはみ出し防止 */
+      background: #f7fafc; border-radius: 10px;
+      padding: 1rem 0.75rem 0.75rem; text-align: center; min-width: 0;
     }
     .chart-card-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #718096;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 3px;
+      font-size: 0.75rem; font-weight: 700; color: #718096;
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px;
     }
-    .chart-card-sub {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #1a365d;
-      margin-bottom: 0.6rem;
-      min-height: 1.4em;
-    }
+    .chart-card-sub { font-size: 1rem; font-weight: 700; color: #1a365d; margin-bottom: 0.6rem; min-height: 1.4em; }
     .chart-canvas-wrap { position: relative; height: 210px; overflow: hidden; }
     .no-data {
-      height: 210px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #cbd5e0;
-      font-size: 0.85rem;
-      border: 2px dashed #e2e8f0;
-      border-radius: 8px;
+      height: 210px; display: flex; align-items: center; justify-content: center;
+      color: #cbd5e0; font-size: 0.85rem; border: 2px dashed #e2e8f0; border-radius: 8px;
     }
 
     /* Table */
     .holdings-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .holdings-table th {
-      text-align: left;
-      padding: 0.6rem 0.9rem;
-      background: #f7fafc;
-      color: #4a5568;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      border-top: 1px solid #e2e8f0;
-      border-bottom: 2px solid #e2e8f0;
+      text-align: left; padding: 0.6rem 0.9rem; background: #f7fafc; color: #4a5568;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      border-top: 1px solid #e2e8f0; border-bottom: 2px solid #e2e8f0;
     }
     .holdings-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #edf2f7; }
     .holdings-table tr:last-child td { border-bottom: none; }
@@ -170,54 +232,36 @@
     .holdings-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
-
-    .badge {
-      display: inline-block;
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 1px 5px;
-      border-radius: 3px;
-      line-height: 1.4;
-    }
+    .badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; line-height: 1.4; }
     .badge-r { background: #fff5f5; color: #c53030; }
     .badge-s { background: #ebf8ff; color: #2b6cb0; }
+    .pct-bar { display: inline-block; height: 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
 
-    .pct-bar {
-      display: inline-block;
-      height: 6px;
-      border-radius: 3px;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-
-    /* Table tabs */
-    .tab-nav {
-      display: flex;
-      border-bottom: 2px solid #e2e8f0;
-      margin-bottom: 0;
-      margin-top: 0.25rem;
-    }
+    /* Tab nav */
+    .tab-nav { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 0; margin-top: 0.25rem; }
     .tab-btn {
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      padding: 0.55rem 1.1rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #a0aec0;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-      white-space: nowrap;
+      background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px;
+      padding: 0.55rem 1.1rem; font-size: 0.875rem; font-weight: 600; color: #a0aec0;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
     }
     .tab-btn:hover { color: #4a5568; }
     .tab-btn.active { color: #1a365d; border-bottom-color: #1a365d; }
+
+    /* Category select */
+    .cat-select {
+      font-size: 0.75rem; padding: 0.2rem 0.35rem;
+      border: 1px solid #e2e8f0; border-radius: 5px;
+      background: white; color: #4a5568; cursor: pointer;
+      max-width: 180px; width: 100%;
+    }
+    .cat-select:focus { outline: none; border-color: #4299e1; }
 
     @media (max-width: 700px) {
       .upload-row  { grid-template-columns: 1fr; }
       .chart-grid  { grid-template-columns: 1fr; }
       .chart-canvas-wrap { height: 250px; }
-      .select-btn  { width: 100%; text-align: center; padding: 0.75rem; }
+      .class-layout { grid-template-columns: 1fr; }
+      .class-chart-wrap { height: 240px; }
     }
   </style>
 </head>
@@ -230,6 +274,7 @@
 
 <div class="container">
 
+  <!-- Upload cards -->
   <div class="upload-row">
     <div class="upload-card" id="card-r">
       <div class="uc-icon">🏦</div>
@@ -249,14 +294,73 @@
     </div>
   </div>
 
+  <!-- Classification card -->
+  <div class="card" id="class-card" style="display:none">
+    <div class="card-header">
+      <span class="card-title">大分類ビュー</span>
+      <div class="view-toggle">
+        <button class="toggle-btn active" id="toggle-simple">シンプル</button>
+        <button class="toggle-btn"        id="toggle-grad">グラデーション</button>
+      </div>
+    </div>
+    <div class="class-layout">
+      <div>
+        <div class="class-chart-wrap">
+          <canvas id="chart-class"></canvas>
+        </div>
+        <div class="cat-legend" id="cat-legend"></div>
+      </div>
+      <div class="class-stats">
+        <!-- 現在の配分 -->
+        <div>
+          <div class="section-title">現在の配分</div>
+          <div class="alloc-row">
+            <span class="alloc-label">株式</span>
+            <div class="alloc-track">
+              <div class="alloc-fill" id="fill-stock" style="background:#2196F3;width:0%"></div>
+              <div class="alloc-target-tick" id="tick-stock"></div>
+            </div>
+            <span class="alloc-pct" id="pct-stock">—</span>
+          </div>
+          <div class="alloc-row">
+            <span class="alloc-label">現物</span>
+            <div class="alloc-track">
+              <div class="alloc-fill" id="fill-phys" style="background:#FFC107;width:0%"></div>
+              <div class="alloc-target-tick" id="tick-phys"></div>
+            </div>
+            <span class="alloc-pct" id="pct-phys">—</span>
+          </div>
+        </div>
+        <!-- 目標配分 -->
+        <div class="setting-box">
+          <div class="section-title">目標配分</div>
+          <div class="target-row">
+            <span>株式</span>
+            <input type="number" class="target-input" id="target-stock-input" min="0" max="100" value="60">
+            <span>%　／　現物</span>
+            <input type="number" class="target-input" id="target-phys-input" min="0" max="100" value="40" readonly>
+            <span>%</span>
+          </div>
+        </div>
+        <!-- シミュレーター -->
+        <div class="sim-box">
+          <div class="sim-title">次回投資シミュレーター</div>
+          <div class="sim-input-row">
+            <input type="number" class="sim-input" id="sim-amount" placeholder="投資金額（円）">
+            <span>円</span>
+          </div>
+          <div id="sim-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail card -->
   <div class="card" id="result-card" style="display:none">
     <div class="result-header">
       <div></div>
-      <button class="refresh-btn" id="refresh-btn">
-        <span>↺</span> 更新
-      </button>
+      <button class="refresh-btn" id="refresh-btn"><span>↺</span> 更新</button>
     </div>
-
     <div class="chart-grid">
       <div class="chart-card">
         <div class="chart-card-title">トータル</div>
@@ -274,13 +378,11 @@
         <div class="chart-canvas-wrap" id="wrap-s"><canvas id="chart-s"></canvas></div>
       </div>
     </div>
-
     <div class="tab-nav">
       <button class="tab-btn active" data-tab="total">トータル</button>
       <button class="tab-btn"        data-tab="r">楽天証券</button>
       <button class="tab-btn"        data-tab="s">SBI証券</button>
     </div>
-
     <table class="holdings-table">
       <thead id="table-head"></thead>
       <tbody id="tbody"></tbody>
@@ -290,7 +392,25 @@
 </div>
 
 <script>
-// ── パレット ────────────────────────────────────────
+// ── カテゴリ定義 ─────────────────────────────────────
+// type: 'stock' | 'other' | 'split' | 'physical'
+// split: 株と現物に分割（physRatio が現物比率）
+const CAT_DEFS = [
+  { id: 'allcountry',       label: 'オルカン',               type: 'stock',    riskLevel: 1, color: '#1565C0' },
+  { id: 'vti',              label: '全米（VTI）',             type: 'stock',    riskLevel: 2, color: '#1976D2' },
+  { id: 'sp500',            label: 'S&P500',                 type: 'stock',    riskLevel: 3, color: '#2196F3' },
+  { id: 'nasdaq',           label: 'NASDAQ-100',             type: 'stock',    riskLevel: 4, color: '#64B5F6' },
+  { id: 'dividend',         label: '高配当',                  type: 'stock',    riskLevel: 5, color: '#4DB6AC' },
+  { id: 'fang',             label: 'FANG+',                  type: 'stock',    riskLevel: 6, color: '#EF5350' },
+  { id: 'other',            label: '別次元',                  type: 'other',    riskLevel: 7, color: '#AB47BC' },
+  { id: 'gold_plus_sp500',  label: 'ゴールドプラス(S&P500)', type: 'split',    stockCat: 'sp500',  physRatio: 0.5, color: '#2196F3' },
+  { id: 'gold_plus_nasdaq', label: 'ゴールドプラス(NASDAQ)', type: 'split',    stockCat: 'nasdaq', physRatio: 0.5, color: '#64B5F6' },
+  { id: 'gold',             label: '現物（金）',               type: 'physical', riskLevel: 0, color: '#FFC107' },
+  { id: 'platinum',         label: '現物（プラチナ）',         type: 'physical', riskLevel: 0, color: '#90A4AE' },
+];
+const CAT_MAP = Object.fromEntries(CAT_DEFS.map(c => [c.id, c]));
+
+// ── パレット（銘柄別チャート用） ─────────────────────
 const PALETTE = [
   '#3182ce','#e6a817','#38a169','#d53f8c','#805ad5',
   '#00b5d8','#dd6b20','#d69e2e','#2f855a','#b83280',
@@ -298,16 +418,212 @@ const PALETTE = [
   '#744210','#702459','#1a365d','#22543d','#322659',
 ];
 
-// ── 状態 ────────────────────────────────────────────
+// ── 状態 ─────────────────────────────────────────────
 const state = { r: null, s: null };
 const charts = {};
 let currentColorMap = {};
 let currentMerged   = [];
 let currentTab      = 'total';
+let viewMode        = 'simple'; // 'simple' | 'grad'
+let lastClassData   = null;
 
-// decode() は削除 — readAsText で代替
+// ── 永続設定 ─────────────────────────────────────────
+let catAssignments = {}; // { fundName: catId }
+let targetAlloc    = { stock: 60, phys: 40 };
 
-// ── CSV パーサ（クォート対応）───────────────────────
+function loadSettings() {
+  try {
+    const c = localStorage.getItem('pf_cats');
+    if (c) catAssignments = JSON.parse(c);
+    const t = localStorage.getItem('pf_target');
+    if (t) {
+      targetAlloc = JSON.parse(t);
+      document.getElementById('target-stock-input').value = targetAlloc.stock;
+      document.getElementById('target-phys-input').value  = targetAlloc.phys;
+    }
+  } catch(e) {}
+}
+function saveCats()   { localStorage.setItem('pf_cats',   JSON.stringify(catAssignments)); }
+function saveTarget() { localStorage.setItem('pf_target', JSON.stringify(targetAlloc)); }
+
+// ── 文字正規化（全角ASCII→半角） ────────────────────
+function normalizeStr(s) {
+  return s.replace(/[！-～]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+}
+
+// ── カテゴリ自動判定 ─────────────────────────────────
+function detectCategory(name) {
+  const n = normalizeStr(name);
+  if (/ゴールドプラス/.test(n))
+    return /NASDAQ|ナスダック/i.test(n) ? 'gold_plus_nasdaq' : 'gold_plus_sp500';
+  if (/ゴールド|gold/i.test(n))                      return 'gold';
+  if (/プラチナ|platinum/i.test(n))                   return 'platinum';
+  if (/FANG/i.test(n))                                return 'fang';
+  if (/インド|nifty/i.test(n))                        return 'other';
+  if (/NASDAQ|ナスダック/i.test(n))                   return 'nasdaq';
+  if (/S&P500|SP500/i.test(n))                        return 'sp500';
+  if (/全世界|オール.カントリー|オルカン/i.test(n))  return 'allcountry';
+  if (/VTI|全米/i.test(n))                            return 'vti';
+  if (/高配当|SCHD|配当/i.test(n))                   return 'dividend';
+  return 'sp500';
+}
+function getCat(name) { return catAssignments[name] || detectCategory(name); }
+
+// ── 株式・現物の内訳計算 ─────────────────────────────
+function breakdown(value, catId) {
+  const def = CAT_MAP[catId];
+  if (!def) return { stockVal: value, physVal: 0, stockCatId: 'sp500' };
+  if (def.type === 'stock' || def.type === 'other')
+    return { stockVal: value, physVal: 0, stockCatId: catId };
+  if (def.type === 'physical')
+    return { stockVal: 0, physVal: value, stockCatId: null, physSubCat: catId };
+  if (def.type === 'split') {
+    return {
+      stockVal:   value * (1 - def.physRatio),
+      physVal:    value * def.physRatio,
+      stockCatId: def.stockCat,
+      physSubCat: 'gold'
+    };
+  }
+  return { stockVal: value, physVal: 0, stockCatId: catId };
+}
+
+// ── 分類集計 ─────────────────────────────────────────
+function calcClassification(merged) {
+  let totalStock = 0, totalPhys = 0;
+  const byCat = {};
+  for (const [name, h] of merged) {
+    const { stockVal, physVal, stockCatId, physSubCat } = breakdown(h.val, getCat(name));
+    totalStock += stockVal;
+    totalPhys  += physVal;
+    if (stockVal > 0 && stockCatId)
+      byCat[stockCatId] = (byCat[stockCatId] || 0) + stockVal;
+    if (physVal > 0) {
+      const pk = physSubCat || 'gold';
+      byCat[pk] = (byCat[pk] || 0) + physVal;
+    }
+  }
+  return { totalStock, totalPhys, byCat };
+}
+
+// ── 分類チャート描画 ─────────────────────────────────
+function renderClassChart(classData) {
+  const { totalStock, totalPhys, byCat } = classData;
+  const total = totalStock + totalPhys;
+  if (total === 0) return;
+
+  let labels, values, colors;
+
+  if (viewMode === 'simple') {
+    labels = ['株式', '現物資産'];
+    values = [totalStock, totalPhys];
+    colors = ['#2196F3', '#FFC107'];
+  } else {
+    labels = []; values = []; colors = [];
+    for (const def of CAT_DEFS) {
+      if (def.type === 'split') continue; // 内訳に分解済みなのでスキップ
+      const v = byCat[def.id];
+      if (v && v > 0) {
+        labels.push(def.label);
+        values.push(v);
+        colors.push(def.color);
+      }
+    }
+  }
+
+  // Legend
+  document.getElementById('cat-legend').innerHTML = labels.map((l, i) =>
+    `<span class="cat-legend-item">
+       <span class="cat-dot" style="background:${colors[i]}"></span>${escHtml(l)}
+     </span>`
+  ).join('');
+
+  if (charts['class']) charts['class'].destroy();
+  charts['class'] = new Chart(
+    document.getElementById('chart-class').getContext('2d'),
+    {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed;
+                return `  ¥${fmt(v)}  (${(v / total * 100).toFixed(1)}%)`;
+              }
+            }
+          }
+        }
+      }
+    }
+  );
+}
+
+// ── 配分バー更新 ─────────────────────────────────────
+function renderAllocBars(classData) {
+  const { totalStock, totalPhys } = classData;
+  const total = totalStock + totalPhys;
+  if (total === 0) return;
+  const stockPct = totalStock / total * 100;
+  const physPct  = totalPhys  / total * 100;
+  document.getElementById('fill-stock').style.width = stockPct.toFixed(1) + '%';
+  document.getElementById('fill-phys').style.width  = physPct.toFixed(1)  + '%';
+  document.getElementById('tick-stock').style.left  = targetAlloc.stock + '%';
+  document.getElementById('tick-phys').style.left   = targetAlloc.phys  + '%';
+  document.getElementById('pct-stock').textContent  = `${stockPct.toFixed(1)}%（目標${targetAlloc.stock}%）`;
+  document.getElementById('pct-phys').textContent   = `${physPct.toFixed(1)}%（目標${targetAlloc.phys}%）`;
+}
+
+// ── シミュレーター更新 ────────────────────────────────
+function renderSimulator(classData) {
+  const amountRaw = parseFloat(document.getElementById('sim-amount').value);
+  const resultEl  = document.getElementById('sim-result');
+  if (isNaN(amountRaw) || amountRaw <= 0) { resultEl.innerHTML = ''; return; }
+
+  const { totalStock, totalPhys } = classData;
+  const currentTotal = totalStock + totalPhys;
+  const newTotal     = currentTotal + amountRaw;
+  let addStock = newTotal * (targetAlloc.stock / 100) - totalStock;
+  let addPhys  = amountRaw - addStock;
+  let note     = '';
+
+  if (addStock < 0) {
+    addStock = 0; addPhys = amountRaw;
+    note = '※ 現在の株式比率が目標を超えています。今回は全額を現物資産に回すと目標に近づきます。';
+  } else if (addPhys < 0) {
+    addPhys = 0; addStock = amountRaw;
+    note = '※ 現在の現物資産比率が目標を超えています。今回は全額を株式に回すと目標に近づきます。';
+  }
+
+  resultEl.innerHTML =
+    `<div class="sim-result-row">
+       <span class="sim-result-label">株式へ</span>
+       <span class="sim-result-amount">¥${fmt(addStock)}</span>
+     </div>
+     <div class="sim-result-row">
+       <span class="sim-result-label">現物資産へ</span>
+       <span class="sim-result-amount">¥${fmt(addPhys)}</span>
+     </div>` +
+    (note ? `<div class="sim-note">${note}</div>` : '');
+}
+
+// ── 分類カード描画 ────────────────────────────────────
+function renderClassCard(merged) {
+  lastClassData = calcClassification(merged);
+  renderClassChart(lastClassData);
+  renderAllocBars(lastClassData);
+  renderSimulator(lastClassData);
+  document.getElementById('class-card').style.display = '';
+}
+
+// ── CSV パーサ（クォート対応）─────────────────────────
 function parseCSV(text) {
   const rows = [];
   let row = [], field = '', q = false;
@@ -331,15 +647,10 @@ function parseCSV(text) {
   return rows;
 }
 
-// ── 評価額カラム候補 ─────────────────────────────────
-// 楽天証券: "時価評価額[円]"  SBI証券: "評価額" 等に対応
 const isValueCol = c => /^(時価評価額|評価額|評価金額|時価金額)(\[円\])?$/.test(c);
 const isNameCol  = c => ['銘柄名','銘柄名称','ファンド名','銘柄','商品名','銘柄・名称'].includes(c);
 const SKIP_NAMES = /^(合計|小計|合\s*計|―|−|-|—|保有商品.*合計|資産合計)$/;
 
-// ── 保有資産を抽出 ────────────────────────────────────
-// 戦略: ヘッダ行（isValueCol かつ isNameCol を両方含む行）を探して
-//        その直下からデータを取り出す。複数セクション対応。
 function extractHoldings(rows) {
   const holdings = {};
   let i = 0;
@@ -348,53 +659,41 @@ function extractHoldings(rows) {
     const vi = row.findIndex(c => isValueCol(c));
     const ni = row.findIndex(c => isNameCol(c));
     if (vi !== -1 && ni !== -1) {
-      // データ行を読み込む
       let j = i + 1;
       while (j < rows.length) {
         const dr = rows[j];
-        // 次のヘッダ行が来たら終了
         if (dr.findIndex(c => isValueCol(c)) !== -1) break;
         const name = dr[ni] || '';
         if (name && !SKIP_NAMES.test(name)) {
           const raw = (dr[vi] || '').replace(/[,¥￥\s]/g, '');
           const val = parseFloat(raw);
-          if (!isNaN(val) && val > 0) {
-            holdings[name] = (holdings[name] || 0) + val;
-          }
+          if (!isNaN(val) && val > 0) holdings[name] = (holdings[name] || 0) + val;
         }
         j++;
       }
-      i = j; // 次のセクションへ
-    } else {
-      i++;
-    }
+      i = j;
+    } else { i++; }
   }
   return holdings;
 }
 
-// ── ファイル読み込み＋パース ─────────────────────────
-// readAsText でブラウザのネイティブ Shift-JIS デコードを使用
-// （iOS Safari で TextDecoder より確実）
 function readFile(file) {
   return new Promise((res, rej) => {
     const fr = new FileReader();
     fr.onload = e => {
       try {
-        const text = e.target.result;
-        const rows = parseCSV(text);
+        const rows = parseCSV(e.target.result);
         const h = extractHoldings(rows);
         if (Object.keys(h).length === 0)
-          rej(new Error('評価額データが見つかりませんでした。列名「評価額」を確認してください。'));
-        else
-          res(h);
+          rej(new Error('評価額データが見つかりませんでした。'));
+        else res(h);
       } catch(err) { rej(err); }
     };
     fr.onerror = () => rej(new Error('ファイル読み込みエラー'));
-    fr.readAsText(file, 'shift-jis');  // ブラウザにデコードを任せる
+    fr.readAsText(file, 'shift-jis');
   });
 }
 
-// ── 合算・ソート ─────────────────────────────────────
 function merge() {
   const map = {};
   for (const [src, key] of [['r','楽天'], ['s','SBI']]) {
@@ -408,56 +707,42 @@ function merge() {
   return Object.entries(map).sort((a,b) => b[1].val - a[1].val);
 }
 
-// ── 数値フォーマット ─────────────────────────────────
 const fmt = n => Math.round(n).toLocaleString('ja-JP');
 
-// ── 1つの円グラフを描画 ──────────────────────────────
-// entries: [[name, value], ...] | null
-// colorMap: { name: color }
-// subId: 小計表示用 span の id (null なら更新しない)
 function drawChart(canvasId, wrapId, subId, entries, colorMap) {
-  const wrap = document.getElementById(wrapId);
+  const wrap  = document.getElementById(wrapId);
   const subEl = subId ? document.getElementById(subId) : null;
-
   if (!entries || entries.length === 0) {
     if (charts[canvasId]) { charts[canvasId].destroy(); delete charts[canvasId]; }
     wrap.innerHTML = '<div class="no-data">データなし</div>';
     if (subEl) subEl.textContent = '';
     return;
   }
-
-  // canvas が消えていたら復元
-  if (!wrap.querySelector('canvas')) {
-    wrap.innerHTML = `<canvas id="${canvasId}"></canvas>`;
-  }
-
-  const total  = entries.reduce((s,[,v]) => s + v, 0);
-  const labels = entries.map(([n]) => n);
-  const values = entries.map(([,v]) => v);
-  const colors = entries.map(([n]) => colorMap[n] || '#ccc');
-
+  if (!wrap.querySelector('canvas')) wrap.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  const total = entries.reduce((s,[,v]) => s + v, 0);
   if (subEl) subEl.textContent = '¥' + fmt(total);
-
   if (charts[canvasId]) charts[canvasId].destroy();
   charts[canvasId] = new Chart(
     document.getElementById(canvasId).getContext('2d'),
     {
       type: 'pie',
       data: {
-        labels,
-        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        labels: entries.map(([n]) => n),
+        datasets: [{
+          data: entries.map(([,v]) => v),
+          backgroundColor: entries.map(([n]) => colorMap[n] || '#ccc'),
+          borderWidth: 2, borderColor: '#fff'
+        }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label: ctx => {
                 const v = ctx.parsed;
-                const pct = ((v / total) * 100).toFixed(1);
-                return `  ¥${fmt(v)}  (${pct}%)`;
+                return `  ¥${fmt(v)}  (${(v / total * 100).toFixed(1)}%)`;
               }
             }
           }
@@ -467,46 +752,41 @@ function drawChart(canvasId, wrapId, subId, entries, colorMap) {
   );
 }
 
-// ── チャート＋テーブル描画 ───────────────────────────
 function render() {
   const merged = merge();
   if (!merged.length) return;
 
-  // 全銘柄に一貫した色を割り当て
   const colorMap = {};
   merged.forEach(([name], i) => { colorMap[name] = PALETTE[i % PALETTE.length]; });
 
-  // トータル
   const totalEntries = merged.map(([n,h]) => [n, h.val]);
   const total = totalEntries.reduce((s,[,v]) => s + v, 0);
   document.getElementById('total-num').textContent = fmt(total);
   drawChart('chart-total', 'wrap-total', null, totalEntries, colorMap);
+  drawChart('chart-r', 'wrap-r', 'sub-r',
+    state.r ? Object.entries(state.r).sort((a,b) => b[1]-a[1]) : null, colorMap);
+  drawChart('chart-s', 'wrap-s', 'sub-s',
+    state.s ? Object.entries(state.s).sort((a,b) => b[1]-a[1]) : null, colorMap);
 
-  // 楽天のみ
-  const rEntries = state.r
-    ? Object.entries(state.r).sort((a,b) => b[1]-a[1])
-    : null;
-  drawChart('chart-r', 'wrap-r', 'sub-r', rEntries, colorMap);
-
-  // SBIのみ
-  const sEntries = state.s
-    ? Object.entries(state.s).sort((a,b) => b[1]-a[1])
-    : null;
-  drawChart('chart-s', 'wrap-s', 'sub-s', sEntries, colorMap);
-
-  // テーブル描画（グローバル変数経由でタブ切り替えでも再利用）
   currentColorMap = colorMap;
   currentMerged   = merged;
+  renderClassCard(merged);
   renderTable(currentTab);
-
   document.getElementById('result-card').style.display = '';
 }
 
-// ── テーブルをタブに応じて描画 ───────────────────────
+// ── カテゴリ選択肢HTML ────────────────────────────────
+function catSelectHtml(name) {
+  const current = getCat(name);
+  const opts = CAT_DEFS.map(d =>
+    `<option value="${d.id}"${d.id === current ? ' selected' : ''}>${escHtml(d.label)}</option>`
+  ).join('');
+  return `<select class="cat-select" data-name="${escHtml(name)}">${opts}</select>`;
+}
+
+// ── テーブル描画 ─────────────────────────────────────
 function renderTable(tab) {
   currentTab = tab;
-
-  // タブボタンの active 切り替え
   document.querySelectorAll('.tab-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.tab === tab)
   );
@@ -518,15 +798,16 @@ function renderTable(tab) {
   if (tab === 'total') {
     thead.innerHTML =
       '<tr>' +
-        '<th style="width:45%">銘柄</th>' +
+        '<th style="width:32%">銘柄</th>' +
+        '<th style="width:22%">カテゴリ</th>' +
         '<th>証券会社</th>' +
         '<th class="num">評価額</th>' +
-        '<th class="num" style="width:130px">割合</th>' +
+        '<th class="num" style="width:110px">割合</th>' +
       '</tr>';
     const total = currentMerged.reduce((s,[,h]) => s + h.val, 0);
     currentMerged.forEach(([name, h]) => {
-      const pct   = h.val / total * 100;
-      const color = currentColorMap[name];
+      const pct    = h.val / total * 100;
+      const color  = currentColorMap[name];
       const badges = [...new Set(h.src)].map(s =>
         s === '楽天'
           ? '<span class="badge badge-r">楽天</span>'
@@ -535,29 +816,28 @@ function renderTable(tab) {
       const tr = document.createElement('tr');
       tr.innerHTML =
         `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
+        `<td>${catSelectHtml(name)}</td>` +
         `<td>${badges}</td>` +
         `<td class="num">¥${fmt(h.val)}</td>` +
         `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
       tbody.appendChild(tr);
     });
-
   } else {
     const label = tab === 'r' ? '楽天証券' : 'SBI証券';
     thead.innerHTML =
       `<tr>` +
-        `<th style="width:55%">銘柄（${label}）</th>` +
+        `<th style="width:38%">銘柄（${label}）</th>` +
+        `<th style="width:22%">カテゴリ</th>` +
         `<th class="num">評価額</th>` +
-        `<th class="num" style="width:130px">割合</th>` +
+        `<th class="num" style="width:110px">割合</th>` +
       `</tr>`;
-
     const srcData = state[tab];
     if (!srcData) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="3" style="text-align:center;color:#a0aec0;padding:2rem">未読み込みです</td>';
+      tr.innerHTML = '<td colspan="4" style="text-align:center;color:#a0aec0;padding:2rem">未読み込みです</td>';
       tbody.appendChild(tr);
       return;
     }
-
     const entries = Object.entries(srcData).sort((a,b) => b[1]-a[1]);
     const total   = entries.reduce((s,[,v]) => s + v, 0);
     entries.forEach(([name, val]) => {
@@ -566,29 +846,37 @@ function renderTable(tab) {
       const tr = document.createElement('tr');
       tr.innerHTML =
         `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
+        `<td>${catSelectHtml(name)}</td>` +
         `<td class="num">¥${fmt(val)}</td>` +
         `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
       tbody.appendChild(tr);
     });
   }
+
+  // カテゴリ変更イベント
+  tbody.querySelectorAll('.cat-select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      catAssignments[e.target.dataset.name] = e.target.value;
+      saveCats();
+      renderClassCard(currentMerged);
+      renderTable(currentTab);
+    });
+  });
 }
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── ファイル入力セットアップ（label→input 方式）────────
 function setupFileInput(inputId, cardId, key) {
   const input = document.getElementById(inputId);
   const card  = document.getElementById(cardId);
   const okEl  = document.getElementById('ok-'  + key);
   const errEl = document.getElementById('err-' + key);
-
   input.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
-    okEl.textContent  = '';
-    errEl.textContent = '';
+    okEl.textContent = ''; errEl.textContent = '';
     card.classList.remove('loaded', 'error');
     try {
       const h = await readFile(file);
@@ -603,6 +891,35 @@ function setupFileInput(inputId, cardId, key) {
   });
 }
 
+// ── ビュートグル ─────────────────────────────────────
+document.getElementById('toggle-simple').addEventListener('click', () => {
+  viewMode = 'simple';
+  document.getElementById('toggle-simple').classList.add('active');
+  document.getElementById('toggle-grad').classList.remove('active');
+  if (lastClassData) renderClassChart(lastClassData);
+});
+document.getElementById('toggle-grad').addEventListener('click', () => {
+  viewMode = 'grad';
+  document.getElementById('toggle-grad').classList.add('active');
+  document.getElementById('toggle-simple').classList.remove('active');
+  if (lastClassData) renderClassChart(lastClassData);
+});
+
+// ── 目標配分変更 ─────────────────────────────────────
+document.getElementById('target-stock-input').addEventListener('input', e => {
+  const v = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+  targetAlloc.stock = v;
+  targetAlloc.phys  = 100 - v;
+  document.getElementById('target-phys-input').value = targetAlloc.phys;
+  saveTarget();
+  if (lastClassData) { renderAllocBars(lastClassData); renderSimulator(lastClassData); }
+});
+
+// ── シミュレーター入力 ────────────────────────────────
+document.getElementById('sim-amount').addEventListener('input', () => {
+  if (lastClassData) renderSimulator(lastClassData);
+});
+
 // ── タブ切り替え ─────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => renderTable(btn.dataset.tab));
@@ -611,18 +928,20 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ── 更新ボタン ───────────────────────────────────────
 document.getElementById('refresh-btn').addEventListener('click', () => {
   state.r = null; state.s = null;
-  currentColorMap = {}; currentMerged = []; currentTab = 'total';
+  currentColorMap = {}; currentMerged = []; currentTab = 'total'; lastClassData = null;
   ['r','s'].forEach(k => {
     document.getElementById('card-' + k).classList.remove('loaded', 'error');
     document.getElementById('ok-'   + k).textContent = '';
     document.getElementById('err-'  + k).textContent = '';
     document.getElementById('file-' + k).value = '';
   });
+  document.getElementById('class-card').style.display  = 'none';
   document.getElementById('result-card').style.display = 'none';
   Object.keys(charts).forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
 });
 
 // ── 初期化 ───────────────────────────────────────────
+loadSettings();
 setupFileInput('file-r', 'card-r', 'r');
 setupFileInput('file-s', 'card-s', 's');
 </script>
