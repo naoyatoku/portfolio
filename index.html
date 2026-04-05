@@ -118,7 +118,7 @@
     }
 
     /* Allocation bars */
-    .alloc-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+    .alloc-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.4rem; }
     .alloc-label { width: 38px; font-size: 0.8rem; font-weight: 600; color: #4a5568; flex-shrink: 0; }
     .alloc-track {
       flex: 1;
@@ -136,7 +136,17 @@
       background: #2d3748;
       border-radius: 2px;
     }
-    .alloc-pct { width: 95px; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: #2d3748; text-align: right; flex-shrink: 0; }
+    .tick-label {
+      position: absolute;
+      top: calc(100% + 4px);
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      color: #2d3748;
+      white-space: nowrap;
+      font-weight: 700;
+      pointer-events: none;
+    }
+    .alloc-pct { width: 160px; font-size: 0.78rem; font-variant-numeric: tabular-nums; color: #2d3748; text-align: right; flex-shrink: 0; line-height: 1.5; }
 
     /* Setting box */
     .setting-box { background: #f7fafc; border-radius: 10px; padding: 0.85rem 1rem; }
@@ -318,7 +328,9 @@
             <span class="alloc-label">株式</span>
             <div class="alloc-track">
               <div class="alloc-fill" id="fill-stock" style="background:#2196F3;width:0%"></div>
-              <div class="alloc-target-tick" id="tick-stock"></div>
+              <div class="alloc-target-tick" id="tick-stock">
+                <span class="tick-label" id="tick-stock-label"></span>
+              </div>
             </div>
             <span class="alloc-pct" id="pct-stock">—</span>
           </div>
@@ -326,7 +338,9 @@
             <span class="alloc-label">現物</span>
             <div class="alloc-track">
               <div class="alloc-fill" id="fill-phys" style="background:#FFC107;width:0%"></div>
-              <div class="alloc-target-tick" id="tick-phys"></div>
+              <div class="alloc-target-tick" id="tick-phys">
+                <span class="tick-label" id="tick-phys-label"></span>
+              </div>
             </div>
             <span class="alloc-pct" id="pct-phys">—</span>
           </div>
@@ -535,6 +549,7 @@ function renderClassChart(classData) {
   document.getElementById('cat-legend').innerHTML = labels.map((l, i) =>
     `<span class="cat-legend-item">
        <span class="cat-dot" style="background:${colors[i]}"></span>${escHtml(l)}
+       <strong style="margin-left:4px;font-variant-numeric:tabular-nums">¥${fmt(values[i])}</strong>
      </span>`
   ).join('');
 
@@ -573,12 +588,18 @@ function renderAllocBars(classData) {
   if (total === 0) return;
   const stockPct = totalStock / total * 100;
   const physPct  = totalPhys  / total * 100;
+  const targetStockAmt = total * (targetAlloc.stock / 100);
+  const targetPhysAmt  = total * (targetAlloc.phys  / 100);
   document.getElementById('fill-stock').style.width = stockPct.toFixed(1) + '%';
   document.getElementById('fill-phys').style.width  = physPct.toFixed(1)  + '%';
   document.getElementById('tick-stock').style.left  = targetAlloc.stock + '%';
   document.getElementById('tick-phys').style.left   = targetAlloc.phys  + '%';
-  document.getElementById('pct-stock').textContent  = `${stockPct.toFixed(1)}%（目標${targetAlloc.stock}%）`;
-  document.getElementById('pct-phys').textContent   = `${physPct.toFixed(1)}%（目標${targetAlloc.phys}%）`;
+  document.getElementById('tick-stock-label').textContent = `¥${fmt(targetStockAmt)}`;
+  document.getElementById('tick-phys-label').textContent  = `¥${fmt(targetPhysAmt)}`;
+  document.getElementById('pct-stock').innerHTML =
+    `<strong>¥${fmt(totalStock)}</strong><br><span style="font-size:0.72rem;color:#718096">${stockPct.toFixed(1)}%（目標${targetAlloc.stock}%）</span>`;
+  document.getElementById('pct-phys').innerHTML  =
+    `<strong>¥${fmt(totalPhys)}</strong><br><span style="font-size:0.72rem;color:#718096">${physPct.toFixed(1)}%（目標${targetAlloc.phys}%）</span>`;
 }
 
 // ── シミュレーター更新 ────────────────────────────────
