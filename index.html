@@ -464,6 +464,39 @@ function loadSettings() {
 function saveCats()   { localStorage.setItem('pf_cats',   JSON.stringify(catAssignments)); }
 function saveTarget() { localStorage.setItem('pf_target', JSON.stringify(targetAlloc)); }
 
+// ── データ永続化 ──────────────────────────────────────
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function saveData(key, holdings) {
+  localStorage.setItem('pf_data_' + key,      JSON.stringify(holdings));
+  localStorage.setItem('pf_data_' + key + '_time', new Date().toISOString());
+}
+function clearData(key) {
+  localStorage.removeItem('pf_data_' + key);
+  localStorage.removeItem('pf_data_' + key + '_time');
+}
+function loadSavedData() {
+  let restored = false;
+  for (const key of ['r', 's']) {
+    const raw  = localStorage.getItem('pf_data_' + key);
+    const time = localStorage.getItem('pf_data_' + key + '_time');
+    if (!raw) continue;
+    try {
+      state[key] = JSON.parse(raw);
+      const card  = document.getElementById('card-' + key);
+      const okEl  = document.getElementById('ok-'   + key);
+      card.classList.add('loaded');
+      okEl.innerHTML =
+        `✓ 保存済みデータ（${Object.keys(state[key]).length} 銘柄）` +
+        `<br><span style="font-size:0.72rem;color:#276749">読込: ${fmtDate(time)}</span>`;
+      restored = true;
+    } catch(e) { clearData(key); }
+  }
+  if (restored) render();
+}
+
 // ── 文字正規化（全角ASCII→半角） ────────────────────
 function normalizeStr(s) {
   return s.replace(/[！-～]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
@@ -918,8 +951,11 @@ function setupFileInput(inputId, cardId, key) {
     try {
       const h = await readFile(file);
       state[key] = h;
+      saveData(key, h);
       card.classList.add('loaded');
-      okEl.textContent = `✓ ${file.name}（${Object.keys(h).length} 銘柄）`;
+      okEl.innerHTML =
+        `✓ ${escHtml(file.name)}（${Object.keys(h).length} 銘柄）` +
+        `<br><span style="font-size:0.72rem;color:#276749">読込: ${fmtDate(new Date().toISOString())}</span>`;
       render();
     } catch(err) {
       card.classList.add('error');
@@ -967,8 +1003,9 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
   state.r = null; state.s = null;
   currentColorMap = {}; currentMerged = []; currentTab = 'total'; lastClassData = null;
   ['r','s'].forEach(k => {
+    clearData(k);
     document.getElementById('card-' + k).classList.remove('loaded', 'error');
-    document.getElementById('ok-'   + k).textContent = '';
+    document.getElementById('ok-'   + k).innerHTML = '';
     document.getElementById('err-'  + k).textContent = '';
     document.getElementById('file-' + k).value = '';
   });
@@ -981,6 +1018,7 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
 loadSettings();
 setupFileInput('file-r', 'card-r', 'r');
 setupFileInput('file-s', 'card-s', 's');
+loadSavedData();
 </script>
 </body>
 </html>
