@@ -129,8 +129,7 @@
       position: relative;
       overflow: visible;
     }
-    .alloc-fill { height: 100%; border-radius: 8px; transition: width 0.5s ease; display: flex; align-items: center; overflow: hidden; }
-    .fill-label { color: white; font-size: 0.7rem; font-weight: 700; white-space: nowrap; padding: 0 8px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+    .alloc-fill { height: 100%; border-radius: 8px; transition: width 0.5s ease; }
     .alloc-target-tick {
       position: absolute;
       top: -3px; bottom: -3px;
@@ -329,7 +328,7 @@
           <div class="alloc-row">
             <span class="alloc-label">株式</span>
             <div class="alloc-track">
-              <div class="alloc-fill" id="fill-stock" style="background:#2196F3;width:0%"><span class="fill-label" id="fill-stock-label"></span></div>
+              <div class="alloc-fill" id="fill-stock" style="background:#2196F3;width:0%"></div>
               <div class="alloc-target-tick" id="tick-stock">
                 <span class="tick-label" id="tick-stock-label"></span>
               </div>
@@ -339,7 +338,7 @@
           <div class="alloc-row">
             <span class="alloc-label">現物</span>
             <div class="alloc-track">
-              <div class="alloc-fill" id="fill-phys" style="background:#FFC107;width:0%"><span class="fill-label" id="fill-phys-label"></span></div>
+              <div class="alloc-fill" id="fill-phys" style="background:#FFC107;width:0%"></div>
               <div class="alloc-target-tick" id="tick-phys">
                 <span class="tick-label" id="tick-phys-label"></span>
               </div>
@@ -580,11 +579,9 @@ function renderClassChart(classData) {
             }
           },
           datalabels: {
-            color: 'white',
-            font: { weight: 'bold', size: 12 },
-            textShadowBlur: 4,
-            textShadowColor: 'rgba(0,0,0,0.4)',
-            formatter: (value) => `¥${fmt(value)}`,
+            color: '#1a365d',
+            font: { weight: 'bold', size: 13 },
+            formatter: (value) => `¥${fmt(value)}\n${(value / total * 100).toFixed(1)}%`,
             display: (ctx) => ctx.dataset.data[ctx.dataIndex] / total >= 0.05
           }
         }
@@ -608,8 +605,6 @@ function renderAllocBars(classData) {
   document.getElementById('tick-phys').style.left   = targetAlloc.phys  + '%';
   document.getElementById('tick-stock-label').textContent = `¥${fmt(targetStockAmt)}`;
   document.getElementById('tick-phys-label').textContent  = `¥${fmt(targetPhysAmt)}`;
-  document.getElementById('fill-stock-label').textContent = `¥${fmt(totalStock)}`;
-  document.getElementById('fill-phys-label').textContent  = `¥${fmt(totalPhys)}`;
   document.getElementById('pct-stock').innerHTML =
     `<strong>¥${fmt(totalStock)}</strong><br><span style="font-size:0.72rem;color:#718096">${stockPct.toFixed(1)}%（目標${targetAlloc.stock}%）</span>`;
   document.getElementById('pct-phys').innerHTML  =
@@ -782,11 +777,9 @@ function drawChart(canvasId, wrapId, subId, entries, colorMap) {
             }
           },
           datalabels: {
-            color: 'white',
+            color: '#1a365d',
             font: { weight: 'bold', size: 11 },
-            textShadowBlur: 4,
-            textShadowColor: 'rgba(0,0,0,0.4)',
-            formatter: (value) => `¥${fmt(value)}`,
+            formatter: (value) => `¥${fmt(value)}\n${(value / total * 100).toFixed(1)}%`,
             display: (ctx) => ctx.dataset.data[ctx.dataIndex] / total >= 0.08
           }
         }
