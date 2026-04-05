@@ -97,7 +97,17 @@
       gap: 2rem;
       align-items: start;
     }
+    .class-charts-row { display: flex; gap: 0.75rem; }
+    .class-chart-col  { flex: 1; min-width: 0; }
+    .chart-col-label  { text-align: center; font-size: 0.73rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
     .class-chart-wrap { position: relative; height: 270px; }
+    .alloc-projected-tick {
+      position: absolute;
+      top: -4px; bottom: -4px;
+      width: 3px;
+      background: #38a169;
+      border-radius: 2px;
+    }
     .cat-legend {
       display: flex;
       flex-wrap: wrap;
@@ -317,8 +327,19 @@
     </div>
     <div class="class-layout">
       <div>
-        <div class="class-chart-wrap">
-          <canvas id="chart-class"></canvas>
+        <div class="class-charts-row">
+          <div class="class-chart-col">
+            <div class="chart-col-label" id="label-current" style="visibility:hidden">現在</div>
+            <div class="class-chart-wrap">
+              <canvas id="chart-class"></canvas>
+            </div>
+          </div>
+          <div class="class-chart-col" id="chart-class-after-col" style="display:none">
+            <div class="chart-col-label" style="color:#38a169">投資後</div>
+            <div class="class-chart-wrap">
+              <canvas id="chart-class-after"></canvas>
+            </div>
+          </div>
         </div>
         <div class="cat-legend" id="cat-legend"></div>
       </div>
@@ -333,6 +354,7 @@
               <div class="alloc-target-tick" id="tick-stock">
                 <span class="tick-label" id="tick-stock-label"></span>
               </div>
+              <div class="alloc-projected-tick" id="proj-tick-stock" style="display:none"></div>
             </div>
             <span class="alloc-pct" id="pct-stock">—</span>
           </div>
@@ -343,6 +365,7 @@
               <div class="alloc-target-tick" id="tick-phys">
                 <span class="tick-label" id="tick-phys-label"></span>
               </div>
+              <div class="alloc-projected-tick" id="proj-tick-phys" style="display:none"></div>
             </div>
             <span class="alloc-pct" id="pct-phys">—</span>
           </div>
@@ -362,10 +385,15 @@
         <div class="sim-box">
           <div class="sim-title">次回投資シミュレーター</div>
           <div class="sim-input-row">
-            <input type="number" class="sim-input" id="sim-amount" placeholder="投資金額（円）">
+            <span style="color:#2b6cb0;font-weight:600;width:2.5em;flex-shrink:0">株式</span>
+            <input type="number" class="sim-input" id="sim-stock" placeholder="0">
             <span>円</span>
           </div>
-          <div id="sim-result"></div>
+          <div class="sim-input-row">
+            <span style="color:#2b6cb0;font-weight:600;width:2.5em;flex-shrink:0">現物</span>
+            <input type="number" class="sim-input" id="sim-phys-amt" placeholder="0">
+            <span>円</span>
+          </div>
         </div>
       </div>
     </div>
@@ -582,11 +610,10 @@ function renderClassChart(classData) {
     }
   }
 
-  // Legend
+  // Legend（金額なし）
   document.getElementById('cat-legend').innerHTML = labels.map((l, i) =>
     `<span class="cat-legend-item">
        <span class="cat-dot" style="background:${colors[i]}"></span>${escHtml(l)}
-       <strong style="margin-left:4px;font-variant-numeric:tabular-nums">¥${fmt(values[i])}</strong>
      </span>`
   ).join('');
 
@@ -645,37 +672,97 @@ function renderAllocBars(classData) {
     `<strong>¥${fmt(totalPhys)}</strong><br><span style="font-size:0.72rem;color:#718096">${physPct.toFixed(1)}%（目標${targetAlloc.phys}%）</span>`;
 }
 
-// ── シミュレーター更新 ────────────────────────────────
-function renderSimulator(classData) {
-  const amountRaw = parseFloat(document.getElementById('sim-amount').value);
-  const resultEl  = document.getElementById('sim-result');
-  if (isNaN(amountRaw) || amountRaw <= 0) { resultEl.innerHTML = ''; return; }
+// ── 投資後チャート描画 ────────────────────────────────
+function renderAfterClassChart(classData, addStock, addPhys) {
+  const { totalStock, totalPhys, byCat } = classData;
+  const newTotalStock = totalStock + addStock;
+  const newTotalPhys  = totalPhys  + addPhys;
+  const total = newTotalStock + newTotalPhys;
 
-  const { totalStock, totalPhys } = classData;
-  const currentTotal = totalStock + totalPhys;
-  const newTotal     = currentTotal + amountRaw;
-  let addStock = newTotal * (targetAlloc.stock / 100) - totalStock;
-  let addPhys  = amountRaw - addStock;
-  let note     = '';
+  let labels, values, colors;
 
-  if (addStock < 0) {
-    addStock = 0; addPhys = amountRaw;
-    note = '※ 現在の株式比率が目標を超えています。今回は全額を現物資産に回すと目標に近づきます。';
-  } else if (addPhys < 0) {
-    addPhys = 0; addStock = amountRaw;
-    note = '※ 現在の現物資産比率が目標を超えています。今回は全額を株式に回すと目標に近づきます。';
+  if (viewMode === 'simple') {
+    labels = ['株式', '現物資産'];
+    values = [newTotalStock, newTotalPhys];
+    colors = ['#2196F3', '#FFC107'];
+  } else {
+    // 既存カテゴリ比率に応じて按分
+    const stockCatIds = CAT_DEFS.filter(d => d.type === 'stock' || d.type === 'other').map(d => d.id);
+    const physCatIds  = CAT_DEFS.filter(d => d.type === 'physical').map(d => d.id);
+    const existStock  = stockCatIds.reduce((s, id) => s + (byCat[id] || 0), 0);
+    const existPhys   = physCatIds .reduce((s, id) => s + (byCat[id] || 0), 0);
+    const newByCat = { ...byCat };
+    if (addStock > 0) {
+      if (existStock > 0)
+        stockCatIds.forEach(id => { if (byCat[id]) newByCat[id] = byCat[id] + addStock * (byCat[id] / existStock); });
+      else
+        newByCat['sp500'] = (newByCat['sp500'] || 0) + addStock;
+    }
+    if (addPhys > 0) {
+      if (existPhys > 0)
+        physCatIds.forEach(id => { if (byCat[id]) newByCat[id] = byCat[id] + addPhys * (byCat[id] / existPhys); });
+      else
+        newByCat['gold'] = (newByCat['gold'] || 0) + addPhys;
+    }
+    labels = []; values = []; colors = [];
+    for (const def of CAT_DEFS) {
+      if (def.type === 'split') continue;
+      const v = newByCat[def.id];
+      if (v && v > 0) { labels.push(def.label); values.push(v); colors.push(def.color); }
+    }
   }
 
-  resultEl.innerHTML =
-    `<div class="sim-result-row">
-       <span class="sim-result-label">株式へ</span>
-       <span class="sim-result-amount">¥${fmt(addStock)}</span>
-     </div>
-     <div class="sim-result-row">
-       <span class="sim-result-label">現物資産へ</span>
-       <span class="sim-result-amount">¥${fmt(addPhys)}</span>
-     </div>` +
-    (note ? `<div class="sim-note">${note}</div>` : '');
+  if (charts['class-after']) charts['class-after'].destroy();
+  charts['class-after'] = new Chart(
+    document.getElementById('chart-class-after').getContext('2d'),
+    {
+      type: 'pie',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => { const v = ctx.parsed; return `  ¥${fmt(v)}  (${(v/total*100).toFixed(1)}%)`; } } },
+          datalabels: {
+            color: '#1a365d', font: { weight: 'bold', size: 13 },
+            formatter: (value) => `¥${fmt(value)}\n${(value/total*100).toFixed(1)}%`,
+            display: (ctx) => ctx.dataset.data[ctx.dataIndex] / total >= 0.05
+          }
+        }
+      }
+    }
+  );
+}
+
+// ── シミュレーター更新 ────────────────────────────────
+function renderSimulator(classData) {
+  const addStock = Math.max(0, parseFloat(document.getElementById('sim-stock').value)    || 0);
+  const addPhys  = Math.max(0, parseFloat(document.getElementById('sim-phys-amt').value) || 0);
+  const afterCol = document.getElementById('chart-class-after-col');
+  const labelCur = document.getElementById('label-current');
+  const projS    = document.getElementById('proj-tick-stock');
+  const projP    = document.getElementById('proj-tick-phys');
+
+  if (addStock <= 0 && addPhys <= 0) {
+    afterCol.style.display        = 'none';
+    labelCur.style.visibility     = 'hidden';
+    projS.style.display = projP.style.display = 'none';
+    if (charts['class-after']) { charts['class-after'].destroy(); delete charts['class-after']; }
+    return;
+  }
+
+  afterCol.style.display    = '';
+  labelCur.style.visibility = 'visible';
+  renderAfterClassChart(classData, addStock, addPhys);
+
+  // 投資後の比率で緑マーカーを更新
+  const { totalStock, totalPhys } = classData;
+  const newTotal    = totalStock + totalPhys + addStock + addPhys;
+  const projStockPct = (totalStock + addStock) / newTotal * 100;
+  const projPhysPct  = (totalPhys  + addPhys)  / newTotal * 100;
+  projS.style.left = projStockPct.toFixed(1) + '%';
+  projP.style.left = projPhysPct .toFixed(1) + '%';
+  projS.style.display = projP.style.display = '';
 }
 
 // ── 分類カード描画 ────────────────────────────────────
@@ -989,8 +1076,10 @@ document.getElementById('target-stock-input').addEventListener('input', e => {
 });
 
 // ── シミュレーター入力 ────────────────────────────────
-document.getElementById('sim-amount').addEventListener('input', () => {
-  if (lastClassData) renderSimulator(lastClassData);
+['sim-stock', 'sim-phys-amt'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (lastClassData) renderSimulator(lastClassData);
+  });
 });
 
 // ── タブ切り替え ─────────────────────────────────────
