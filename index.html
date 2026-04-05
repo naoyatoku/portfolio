@@ -113,9 +113,11 @@
       flex-wrap: wrap;
       gap: 0.35rem 0.9rem;
       margin-top: 0.75rem;
+      align-items: center;
     }
     .cat-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #4a5568; }
     .cat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-group-hd { font-size: 0.68rem; font-weight: 700; color: #718096; background: #edf2f7; border-radius: 4px; padding: 1px 6px; }
 
     .class-stats { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -451,8 +453,8 @@ const CAT_DEFS = [
   { id: 'other',            label: '別次元',                  type: 'other',    riskLevel: 7, color: '#AB47BC' },
   { id: 'gold_plus_sp500',  label: 'ゴールドプラス(S&P500)', type: 'split',    stockCat: 'sp500',  physRatio: 0.5, color: '#2196F3' },
   { id: 'gold_plus_nasdaq', label: 'ゴールドプラス(NASDAQ)', type: 'split',    stockCat: 'nasdaq', physRatio: 0.5, color: '#64B5F6' },
-  { id: 'gold',             label: '現物（金）',               type: 'physical', riskLevel: 0, color: '#FFC107' },
-  { id: 'platinum',         label: '現物（プラチナ）',         type: 'physical', riskLevel: 0, color: '#90A4AE' },
+  { id: 'gold',             label: '現物（金）',               type: 'physical', riskLevel: 0, color: '#FFA000' },
+  { id: 'platinum',         label: '現物（プラチナ）',         type: 'physical', riskLevel: 0, color: '#C8A96E' },
 ];
 const CAT_MAP = Object.fromEntries(CAT_DEFS.map(c => [c.id, c]));
 
@@ -600,7 +602,7 @@ function renderClassChart(classData) {
   } else {
     labels = []; values = []; colors = [];
     for (const def of CAT_DEFS) {
-      if (def.type === 'split') continue; // 内訳に分解済みなのでスキップ
+      if (def.type === 'split') continue;
       const v = byCat[def.id];
       if (v && v > 0) {
         labels.push(def.label);
@@ -610,12 +612,31 @@ function renderClassChart(classData) {
     }
   }
 
-  // Legend（金額なし）
-  document.getElementById('cat-legend').innerHTML = labels.map((l, i) =>
-    `<span class="cat-legend-item">
-       <span class="cat-dot" style="background:${colors[i]}"></span>${escHtml(l)}
-     </span>`
-  ).join('');
+  // Legend — グラデーション時はグループ見出しつき
+  if (viewMode === 'grad') {
+    const stockItems = [], physItems = [];
+    CAT_DEFS.filter(d => d.type !== 'split').forEach(def => {
+      const v = byCat[def.id];
+      if (!v || v <= 0) return;
+      const html = `<span class="cat-legend-item"><span class="cat-dot" style="background:${def.color}"></span>${escHtml(def.label)}</span>`;
+      (def.type === 'physical' ? physItems : stockItems).push(html);
+    });
+    document.getElementById('cat-legend').innerHTML =
+      (stockItems.length ? `<span class="legend-group-hd">株式</span>${stockItems.join('')}` : '') +
+      (physItems.length  ? `<span class="legend-group-hd" style="margin-left:0.8rem">現物資産</span>${physItems.join('')}` : '');
+  } else {
+    document.getElementById('cat-legend').innerHTML = labels.map((l, i) =>
+      `<span class="cat-legend-item"><span class="cat-dot" style="background:${colors[i]}"></span>${escHtml(l)}</span>`
+    ).join('');
+  }
+
+  // グラデーション時は現物スライスに金色ボーダー
+  const physIds = new Set(CAT_DEFS.filter(d => d.type === 'physical').map(d => d.id));
+  const entryIsPhys = viewMode === 'grad'
+    ? CAT_DEFS.filter(d => d.type !== 'split' && byCat[d.id] > 0).map(d => physIds.has(d.id))
+    : [false, true]; // simple: 株式=false, 現物=true
+  const borderWidths = entryIsPhys.map(p => p ? 3.5 : 1.5);
+  const borderColors = entryIsPhys.map(p => p ? '#B7860B' : '#fff');
 
   if (charts['class']) charts['class'].destroy();
   charts['class'] = new Chart(
@@ -624,7 +645,7 @@ function renderClassChart(classData) {
       type: 'pie',
       data: {
         labels,
-        datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: borderWidths, borderColor: borderColors }]
       },
       options: {
         responsive: true,
