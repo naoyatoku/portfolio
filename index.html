@@ -270,6 +270,18 @@
     .tab-btn:hover { color: #4a5568; }
     .tab-btn.active { color: #1a365d; border-bottom-color: #1a365d; }
 
+    /* Sortable headers */
+    .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    .sortable:hover { background: #edf2f7; }
+    .sort-active { color: #1a365d; }
+    .sort-arrow { margin-left: 3px; font-size: 0.7em; opacity: 0.45; }
+    .sort-arrow.on { opacity: 1; }
+
+    /* Gain/loss colors */
+    .gain-pos  { color: #276749; font-weight: 700; }
+    .gain-neg  { color: #c53030; font-weight: 700; }
+    .gain-zero { color: #718096; }
+
     /* Category select */
     .cat-select {
       font-size: 0.75rem; padding: 0.2rem 0.35rem;
@@ -293,7 +305,7 @@
 <header>
   <span style="font-size:1.4rem">📊</span>
   <h1 style="cursor:pointer" onclick="location.reload()">資産ポートフォリオ</h1>
-  <span style="margin-left:auto;font-size:0.72rem;opacity:0.6;letter-spacing:0.03em">v1.4</span>
+  <span style="margin-left:auto;font-size:0.72rem;opacity:0.6;letter-spacing:0.03em">v1.5</span>
 </header>
 
 <div class="container">
@@ -458,6 +470,34 @@ const CAT_DEFS = [
 ];
 const CAT_MAP = Object.fromEntries(CAT_DEFS.map(c => [c.id, c]));
 
+// ── 経費率マスター ────────────────────────────────────
+// normalizeStr 後の名前で部分マッチ（長い・具体的なパターンを先に）
+const EXPENSE_RATE_RULES = [
+  { pat: /楽天.*プラス.*オール.?カントリー/,           rate: 0.0561  },
+  { pat: /eMAXIS.*Slim.*オール.?カントリー|オルカン/,  rate: 0.05775 },
+  { pat: /楽天.*プラス.*S&P500/i,                     rate: 0.077   },
+  { pat: /eMAXIS.*Slim.*S&P500|eMAXIS.*Slim.*米国/i,  rate: 0.09372 },
+  { pat: /楽天.*プラス.*NASDAQ|楽天.*プラス.*ナスダック/i, rate: 0.198 },
+  { pat: /楽天.*VTI|楽天.*全米株式/,                  rate: 0.162   },
+  { pat: /楽天.*インド.*Nifty|楽天.*インド株/i,        rate: 0.308   },
+  { pat: /eMAXIS.*インド/,                            rate: 0.44    },
+  { pat: /楽天.*SCHD|楽天.*シュワブ.*高配当/,         rate: 0.192   },
+  { pat: /楽天.*プラチナ/,                            rate: 0.44    },
+  { pat: /Tracers.*NASDAQ.*ゴールドプラス|Tracers.*ゴールドプラス.*NASDAQ/i, rate: 0.1991 },
+  { pat: /Tracers.*S&P500.*ゴールドプラス|Tracers.*ゴールドプラス/i, rate: 0.1991 },
+  { pat: /iFreeNEXT.*FANG/i,                         rate: 0.7755  },
+  { pat: /ステート.*ストリート.*ゴールド/,             rate: 0.2475  },
+  { pat: /SBI.*iシェアーズ.*ゴールド/,               rate: 0.1838  },
+  { pat: /SBI.*S.*米国高配当|SBI.*S.*高配当/,        rate: 0.1238  },
+];
+function getExpenseRate(name) {
+  const n = normalizeStr(name);
+  for (const { pat, rate } of EXPENSE_RATE_RULES) {
+    if (pat.test(n)) return rate;
+  }
+  return null;
+}
+
 // ── パレット（銘柄別チャート用） ─────────────────────
 const PALETTE = [
   '#3182ce','#e6a817','#38a169','#d53f8c','#805ad5',
@@ -515,6 +555,10 @@ function loadSavedData() {
     if (!raw) continue;
     try {
       state[key] = JSON.parse(raw);
+      // 旧フォーマット { name: number } を新フォーマットに移行
+      for (const [n, d] of Object.entries(state[key])) {
+        if (typeof d === 'number') state[key][n] = { val: d, gainYen: null, gainPct: null };
+      }
       const card  = document.getElementById('card-' + key);
       const okEl  = document.getElementById('ok-'   + key);
       card.classList.add('loaded');
@@ -543,7 +587,7 @@ function detectCategory(name) {
   if (/インド|nifty/i.test(n))                        return 'other';
   if (/NASDAQ|ナスダック/i.test(n))                   return 'nasdaq';
   if (/S&P500|SP500/i.test(n))                        return 'sp500';
-  if (/全世界|オール.カントリー|オルカン/i.test(n))  return 'allcountry';
+  if (/全世界|オール.?カントリー|オルカン/i.test(n))  return 'allcountry';
   if (/VTI|全米/i.test(n))                            return 'vti';
   if (/高配当|SCHD|配当/i.test(n))                   return 'dividend';
   return 'sp500';
@@ -819,18 +863,20 @@ function parseCSV(text) {
   return rows;
 }
 
-const isValueCol = c => /^(時価評価額|評価額|評価金額|時価金額)(\[円\])?$/.test(c);
-const isNameCol  = c => ['銘柄名','銘柄名称','ファンド名','銘柄','商品名','銘柄・名称'].includes(c);
-const SKIP_NAMES = /^(合計|小計|合\s*計|―|−|-|—|保有商品.*合計|資産合計)$/;
+const isValueCol   = c => /^(時価評価額|評価額|評価金額|時価金額)(\[円\])?$/.test(c);
+const isNameCol    = c => ['銘柄名','銘柄名称','ファンド名','銘柄','商品名','銘柄・名称'].includes(c);
+const isGainYenCol = c => /^評価損益(\[円\])?$/.test(c);
+const SKIP_NAMES   = /^(合計|小計|合\s*計|―|−|-|—|保有商品.*合計|資産合計)$/;
 
 function extractHoldings(rows) {
   const holdings = {};
   let i = 0;
   while (i < rows.length) {
     const row = rows[i];
-    const vi = row.findIndex(c => isValueCol(c));
-    const ni = row.findIndex(c => isNameCol(c));
+    const vi  = row.findIndex(c => isValueCol(c));
+    const ni  = row.findIndex(c => isNameCol(c));
     if (vi !== -1 && ni !== -1) {
+      const gyi = row.findIndex(c => isGainYenCol(c));
       let j = i + 1;
       while (j < rows.length) {
         const dr = rows[j];
@@ -839,12 +885,29 @@ function extractHoldings(rows) {
         if (name && !SKIP_NAMES.test(name)) {
           const raw = (dr[vi] || '').replace(/[,¥￥\s]/g, '');
           const val = parseFloat(raw);
-          if (!isNaN(val) && val > 0) holdings[name] = (holdings[name] || 0) + val;
+          if (!isNaN(val) && val > 0) {
+            const h = holdings[name] || { val: 0, gainYen: null };
+            h.val += val;
+            if (gyi !== -1) {
+              const gy = parseFloat((dr[gyi] || '').replace(/[,¥￥\s+]/g, ''));
+              if (!isNaN(gy)) h.gainYen = (h.gainYen || 0) + gy;
+            }
+            holdings[name] = h;
+          }
         }
         j++;
       }
       i = j;
     } else { i++; }
+  }
+  // gainPct を gainYen / 取得金額 から算出
+  for (const h of Object.values(holdings)) {
+    if (h.gainYen !== null && h.val > 0) {
+      const cost = h.val - h.gainYen;
+      h.gainPct = cost > 0 ? (h.gainYen / cost * 100) : null;
+    } else {
+      h.gainPct = null;
+    }
   }
   return holdings;
 }
@@ -870,10 +933,18 @@ function merge() {
   const map = {};
   for (const [src, key] of [['r','楽天'], ['s','SBI']]) {
     if (!state[src]) continue;
-    for (const [name, val] of Object.entries(state[src])) {
-      if (!map[name]) map[name] = { val: 0, src: [] };
-      map[name].val += val;
+    for (const [name, h] of Object.entries(state[src])) {
+      if (!map[name]) map[name] = { val: 0, gainYen: null, gainPct: null, src: [] };
+      map[name].val += h.val;
+      if (h.gainYen !== null) map[name].gainYen = (map[name].gainYen || 0) + h.gainYen;
       map[name].src.push(key);
+    }
+  }
+  // gainPct を再計算
+  for (const h of Object.values(map)) {
+    if (h.gainYen !== null && h.val > 0) {
+      const cost = h.val - h.gainYen;
+      h.gainPct = cost > 0 ? (h.gainYen / cost * 100) : null;
     }
   }
   return Object.entries(map).sort((a,b) => b[1].val - a[1].val);
@@ -942,9 +1013,9 @@ function render() {
   document.getElementById('total-num').textContent = fmt(total);
   drawChart('chart-total', 'wrap-total', null, totalEntries, colorMap);
   drawChart('chart-r', 'wrap-r', 'sub-r',
-    state.r ? Object.entries(state.r).sort((a,b) => b[1]-a[1]) : null, colorMap);
+    state.r ? Object.entries(state.r).map(([n,h]) => [n, h.val]).sort((a,b) => b[1]-a[1]) : null, colorMap);
   drawChart('chart-s', 'wrap-s', 'sub-s',
-    state.s ? Object.entries(state.s).sort((a,b) => b[1]-a[1]) : null, colorMap);
+    state.s ? Object.entries(state.s).map(([n,h]) => [n, h.val]).sort((a,b) => b[1]-a[1]) : null, colorMap);
 
   currentColorMap = colorMap;
   currentMerged   = merged;
@@ -962,6 +1033,42 @@ function catSelectHtml(name) {
   return `<select class="cat-select" data-name="${escHtml(name)}">${opts}</select>`;
 }
 
+// ── テーブルソート ────────────────────────────────────
+let tableSort = { key: 'val', dir: 'desc' };
+
+function sortRows(rows) {
+  const { key, dir } = tableSort;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    switch (key) {
+      case 'name':    return mult * a[0].localeCompare(b[0], 'ja');
+      case 'cat': {
+        const ra = CAT_MAP[getCat(a[0])]?.riskLevel ?? 99;
+        const rb = CAT_MAP[getCat(b[0])]?.riskLevel ?? 99;
+        return mult * (ra - rb);
+      }
+      case 'gainYen': return mult * ((a[1].gainYen ?? -Infinity) - (b[1].gainYen ?? -Infinity));
+      case 'gainPct': return mult * ((a[1].gainPct ?? -Infinity) - (b[1].gainPct ?? -Infinity));
+      case 'expense': {
+        const ea = getExpenseRate(a[0]) ?? Infinity;
+        const eb = getExpenseRate(b[0]) ?? Infinity;
+        return mult * (ea - eb);
+      }
+      default:        return mult * (a[1].val - b[1].val); // 'val'
+    }
+  });
+}
+
+function thSort(label, key, cls, style) {
+  const isActive = tableSort.key === key;
+  const arrow    = isActive
+    ? `<span class="sort-arrow on">${tableSort.dir === 'asc' ? '▲' : '▼'}</span>`
+    : `<span class="sort-arrow">⇅</span>`;
+  const clsStr   = ['sortable', cls, isActive ? 'sort-active' : ''].filter(Boolean).join(' ');
+  const styleStr = style ? ` style="${style}"` : '';
+  return `<th class="${clsStr}" data-sort="${key}"${styleStr}>${label}${arrow}</th>`;
+}
+
 // ── テーブル描画 ─────────────────────────────────────
 function renderTable(tab) {
   currentTab = tab;
@@ -973,63 +1080,94 @@ function renderTable(tab) {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  if (tab === 'total') {
-    thead.innerHTML =
-      '<tr>' +
-        '<th style="width:32%">銘柄</th>' +
-        '<th style="width:22%">カテゴリ</th>' +
-        '<th>証券会社</th>' +
-        '<th class="num">評価額</th>' +
-        '<th class="num" style="width:110px">割合</th>' +
-      '</tr>';
-    const total = currentMerged.reduce((s,[,h]) => s + h.val, 0);
-    currentMerged.forEach(([name, h]) => {
-      const pct    = h.val / total * 100;
-      const color  = currentColorMap[name];
-      const badges = [...new Set(h.src)].map(s =>
-        s === '楽天'
-          ? '<span class="badge badge-r">楽天</span>'
-          : '<span class="badge badge-s">SBI</span>'
-      ).join(' ');
-      const tr = document.createElement('tr');
-      tr.innerHTML =
-        `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
-        `<td>${catSelectHtml(name)}</td>` +
-        `<td>${badges}</td>` +
-        `<td class="num">¥${fmt(h.val)}</td>` +
-        `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
-      tbody.appendChild(tr);
-    });
-  } else {
-    const label = tab === 'r' ? '楽天証券' : 'SBI証券';
-    thead.innerHTML =
-      `<tr>` +
-        `<th style="width:38%">銘柄（${label}）</th>` +
-        `<th style="width:22%">カテゴリ</th>` +
-        `<th class="num">評価額</th>` +
-        `<th class="num" style="width:110px">割合</th>` +
-      `</tr>`;
-    const srcData = state[tab];
-    if (!srcData) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="4" style="text-align:center;color:#a0aec0;padding:2rem">未読み込みです</td>';
-      tbody.appendChild(tr);
-      return;
-    }
-    const entries = Object.entries(srcData).sort((a,b) => b[1]-a[1]);
-    const total   = entries.reduce((s,[,v]) => s + v, 0);
-    entries.forEach(([name, val]) => {
-      const pct   = val / total * 100;
+  function gainHtml(gainYen, gainPct) {
+    if (gainYen === null || gainYen === undefined)
+      return '<span style="color:#a0aec0">—</span>';
+    const cls  = gainYen > 0 ? 'gain-pos' : gainYen < 0 ? 'gain-neg' : 'gain-zero';
+    const sign = gainYen > 0 ? '+' : '';
+    const pct  = gainPct !== null ? `<br><span style="font-size:0.75em">${sign}${gainPct.toFixed(1)}%</span>` : '';
+    return `<span class="${cls}">${sign}¥${fmt(gainYen)}${pct}</span>`;
+  }
+
+  function expenseHtml(name) {
+    const r = getExpenseRate(name);
+    return r !== null
+      ? `<span style="font-variant-numeric:tabular-nums">${r.toFixed(4)}%</span>`
+      : '<span style="color:#a0aec0">—</span>';
+  }
+
+  function renderRows(rows) {
+    const total  = rows.reduce((s, [,h]) => s + h.val, 0);
+    const sorted = sortRows(rows);
+    sorted.forEach(([name, h]) => {
+      const pct   = h.val / total * 100;
       const color = currentColorMap[name] || '#ccc';
-      const tr = document.createElement('tr');
-      tr.innerHTML =
+      const tr    = document.createElement('tr');
+      let cells =
         `<td><span class="dot" style="background:${color}"></span>${escHtml(name)}</td>` +
-        `<td>${catSelectHtml(name)}</td>` +
-        `<td class="num">¥${fmt(val)}</td>` +
-        `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>`;
+        `<td>${catSelectHtml(name)}</td>`;
+      if (tab === 'total') {
+        const badges = [...new Set(h.src)].map(s =>
+          s === '楽天' ? '<span class="badge badge-r">楽天</span>'
+                       : '<span class="badge badge-s">SBI</span>'
+        ).join(' ');
+        cells += `<td>${badges}</td>`;
+      }
+      cells +=
+        `<td class="num">¥${fmt(h.val)}</td>` +
+        `<td class="num"><span class="pct-bar" style="width:${Math.max(pct,1).toFixed(1)}px;background:${color}"></span><strong>${pct.toFixed(1)}%</strong></td>` +
+        `<td class="num">${gainHtml(h.gainYen, h.gainPct)}</td>` +
+        `<td class="num">${expenseHtml(name)}</td>`;
+      tr.innerHTML = cells;
       tbody.appendChild(tr);
     });
   }
+
+  if (tab === 'total') {
+    const cols = tab === 'total' ? 7 : 6;
+    thead.innerHTML = '<tr>' +
+      thSort('銘柄',    'name',    '',    'width:26%') +
+      thSort('カテゴリ','cat',     '',    'width:16%') +
+      '<th>証券会社</th>' +
+      thSort('評価額',  'val',     'num'            ) +
+      '<th class="num" style="width:80px">割合</th>'   +
+      thSort('評価損益','gainYen', 'num'            ) +
+      thSort('経費率',  'expense', 'num', 'width:80px') +
+      '</tr>';
+    renderRows(currentMerged);
+  } else {
+    const label = tab === 'r' ? '楽天証券' : 'SBI証券';
+    const srcData = state[tab];
+    thead.innerHTML = '<tr>' +
+      thSort(`銘柄（${label}）`, 'name',    '',    'width:30%') +
+      thSort('カテゴリ',          'cat',     '',    'width:16%') +
+      thSort('評価額',            'val',     'num'            ) +
+      '<th class="num" style="width:80px">割合</th>'             +
+      thSort('評価損益',          'gainYen', 'num'            ) +
+      thSort('経費率',            'expense', 'num', 'width:80px') +
+      '</tr>';
+    if (!srcData) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="6" style="text-align:center;color:#a0aec0;padding:2rem">未読み込みです</td>';
+      tbody.appendChild(tr);
+      return;
+    }
+    renderRows(Object.entries(srcData).sort((a,b) => b[1].val - a[1].val));
+  }
+
+  // ソートヘッダー
+  thead.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (tableSort.key === key) {
+        tableSort.dir = tableSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        tableSort.key = key;
+        tableSort.dir = (key === 'name' || key === 'cat' || key === 'expense') ? 'asc' : 'desc';
+      }
+      renderTable(currentTab);
+    });
+  });
 
   // カテゴリ変更イベント
   tbody.querySelectorAll('.cat-select').forEach(sel => {
